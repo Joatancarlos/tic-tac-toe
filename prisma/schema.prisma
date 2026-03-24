@@ -8,13 +8,21 @@ datasource db {
 }
 
 model User {
-  id       String @id @default(uuid())
-  username String @unique
-  password String
+  id           String     @id @default(uuid())
+  username     String     @unique
+  password     String
+  tokenVersion Int        @default(0)
+  status       UserStatus @default(OFFLINE)
 
   ApiLog     ApiLog[]
   Score      Score[]
   User_Match User_Match[]
+}
+
+enum UserStatus {
+  ONLINE
+  IN_MATCH
+  OFFLINE
 }
 
 model Match {
