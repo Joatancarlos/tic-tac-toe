@@ -1,0 +1,69 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id       String @id @default(uuid())
+  username String @unique
+  password String
+
+  ApiLog     ApiLog[]
+  Score      Score[]
+  User_Match User_Match[]
+}
+
+model Match {
+  id     String     @id @default(uuid())
+  status GameStatus @default(WAITING)
+
+  currentPlayerId String?
+  User_Match      User_Match[]
+}
+
+model User_Match {
+  id      String @id @default(uuid())
+  userId  String
+  matchId String
+
+  user  User  @relation(fields: [userId], references: [id])
+  match Match @relation(fields: [matchId], references: [id])
+
+  @@unique([userId, matchId])
+}
+
+model Score {
+  id        String @id @default(uuid())
+  userId    String
+  victories Int    @default(0)
+  draw      Int    @default(0)
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum GameStatus {
+  WAITING
+  ON_GOING
+  FINISHED
+}
+
+model ApiLog {
+  id             Int      @id @default(autoincrement())
+  endpointAccess String
+  requestMethod  String
+  statusCode     Int
+  responseTime   Int
+  timestamp      DateTime @default(now())
+  userId         String?
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([endpointAccess])
+  @@index([requestMethod])
+  @@index([statusCode])
+  @@index([timestamp])
+}
