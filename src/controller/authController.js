@@ -1,6 +1,7 @@
 import {prisma} from "../lib/prisma.js";
 import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
+import {UserStatus} from "@prisma/client";
 
 const login = async (req, res) => {
     const { username, password } = req.body;
@@ -18,6 +19,11 @@ const login = async (req, res) => {
     if (!passwordValid) {
         return res.status(401).json({ message: "Invalid credentials" });
     }
+
+    await prisma.user.update({
+        where: { username },
+        data: { status: UserStatus.ONLINE }
+    })
 
     const token = jwt.sign(
         {
@@ -38,7 +44,8 @@ const logout = async (req, res) => {
         data: {
             tokenVersion: {
                 increment: 1
-            }
+            },
+            status: UserStatus.OFFLINE
         }
     });
 
