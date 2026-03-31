@@ -1,4 +1,4 @@
-# Joatan Carlos e Matheus Victor
+# capstone-temp
 
 
 
@@ -15,14 +15,14 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
-git remote add origin https://gitlab.com/jala-university1/cohort-4/PT.CO.CSNT-245.GA.T1.26.M2/SC/projeto-final-capstone/joatan-carlos-e-matheus-victor.git
+git remote add origin https://gitlab.com/joatanfeitosa/capstone-temp.git
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
-* [Set up project integrations](https://gitlab.com/jala-university1/cohort-4/PT.CO.CSNT-245.GA.T1.26.M2/SC/projeto-final-capstone/joatan-carlos-e-matheus-victor/-/settings/integrations)
+* [Set up project integrations](https://gitlab.com/joatanfeitosa/capstone-temp/-/settings/integrations)
 
 ## Collaborate with your team
 

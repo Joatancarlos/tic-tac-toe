@@ -1,0 +1,6 @@
+.idea
+./node_modules
+/node_modules
+/src/generated/prisma
+/prisma/migrations
+prisma/migrations/migration_lock.toml
