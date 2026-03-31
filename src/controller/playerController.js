@@ -102,6 +102,22 @@ const playerController = {
         } catch (error) {
             next(error);
         }
+    },
+
+    getOnlineProfiles: async (req, res, next) => {
+        try {
+            const user = await db.user.findMany({
+                where: { status: 'ONLINE' },
+                select: {
+                    id: true,
+                    username: true,
+                }
+            });
+
+            res.json(user);
+        } catch (error) {
+            next(error);
+        }
     }
 
 }
