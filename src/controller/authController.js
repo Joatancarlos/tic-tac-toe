@@ -3,7 +3,7 @@ import bcrypt from 'bcrypt';
 import jwt from 'jsonwebtoken';
 import {UserStatus} from "@prisma/client";
 
-const login = async (req, res) => {
+const login = async (req, res, next) => {
     const { username, password } = req.body;
 
     const user = await prisma.user.findUnique({
@@ -11,13 +11,13 @@ const login = async (req, res) => {
     });
 
     if (!user) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return next({ status:401, message: "Invalid credentials" });
     }
 
     const passwordValid = await bcrypt.compare(password, user.password);
 
     if (!passwordValid) {
-        return res.status(401).json({ message: "Invalid credentials" });
+        return next({ status:401, message: "Invalid credentials" });
     }
 
     await prisma.user.update({

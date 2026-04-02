@@ -8,10 +8,10 @@ const playerController = {
 
         // Validação simples
         if (!username || !password) {
-            return res.status(400).json({ error: 'Fill all fields' });
+            return next({ status: 400, error: 'Fill all fields' });
         }
         if (password.length < 8) {
-            return res.status(400).json({ error: "The password must be at least 8 characters" });
+            return next({ status: 400, error: "The password must be at least 8 characters" });
         }
         const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
@@ -34,7 +34,7 @@ const playerController = {
             });
 
             if (!userFound) {
-                return res.status(404).json({ error: 'Player not found' });
+                return next({ status: 400, error: 'Player not found' });
             }
             const { password, ...userSafe } = userFound;
             res.json(userSafe);
@@ -53,7 +53,7 @@ const playerController = {
                     id
                 }
             });
-            if (!userFound) return res.status(404).json({ error: 'Player not found' });
+            if (!userFound) return next({ status:400, error: 'Player not found' });
 
             const newPassword = password || userFound.password;
             const passwordHash = await bcrypt.hash(newPassword, SALT_ROUNDS);

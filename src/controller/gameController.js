@@ -35,6 +35,7 @@ const gameController = {
         } catch (e) {
             console.error(e);
             res.status(500).json({ error: "Erro ao criar partida." });
+            next(e)
         }
     },
 
@@ -42,7 +43,12 @@ const gameController = {
         const { userId } = req.user;
         const { matchId } = req.body;
 
-        if (!matchId) return res.status(400).json({ error: "matchId é obrigatório" });
+        if (!matchId) {
+            return next({
+                status: 400,
+                message: "matchId é obrigatório"
+            })
+        }
 
         try {
             const match = await db.match.findUnique({
@@ -50,11 +56,17 @@ const gameController = {
                 include: { User_Match: true }
             });
 
-            if (!match) return res.status(404).json({ error: "Partida não encontrada." });
-            if (match.status !== 'WAITING') return res.status(400).json({ error: "Esta partida já começou ou terminou." });
+            if (!match) {
+                return next({
+                    status: 404,
+                    message: "Partida não encontrada"
+                })
+            }
+
+            if (match.status !== 'WAITING') return next({ status: 400, error: "Esta partida já começou ou terminou." });
 
             const alreadyIn = match.User_Match.some(m => m.userId === userId);
-            if (alreadyIn) return res.status(400).json({ error: "Você já está nesta partida." });
+            if (alreadyIn) return next({ status: 400, error: "Você já está nesta partida." });
 
             const result = await db.$transaction(async (tx) => {
                 const newUserMatch = await tx.user_Match.create({

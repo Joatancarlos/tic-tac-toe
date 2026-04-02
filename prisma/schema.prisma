@@ -14,7 +14,7 @@ model User {
   tokenVersion Int        @default(0)
   status       UserStatus @default(OFFLINE)
 
-  ApiLog     ApiLog[]
+  HttpLog    HttpLog[]
   Score      Score[]
   User_Match User_Match[]
 }
@@ -59,19 +59,20 @@ enum GameStatus {
   FINISHED
 }
 
-model ApiLog {
-  id             Int      @id @default(autoincrement())
-  endpointAccess String
-  requestMethod  String
-  statusCode     Int
-  responseTime   Int
-  timestamp      DateTime @default(now())
-  userId         String?
+model HttpLog {
+  id           Int      @id @default(autoincrement())
+  method       String
+  url          String
+  status       Int
+  responseTime Int?
+  ip           String?
+  userAgent    String?
+  error        String?
+  createdAt    DateTime @default(now())
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  @@index([endpointAccess])
-  @@index([requestMethod])
-  @@index([statusCode])
-  @@index([timestamp])
+  @@index([method])
+  @@index([status])
+  @@index([createdAt])
 }
