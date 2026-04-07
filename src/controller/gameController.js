@@ -123,6 +123,11 @@ const gameController = {
         const { userId } = req.user;
         const { matchId, userGuestId } = req.body;
 
+        if(!matchId || !userGuestId) return next({
+            status: 400,
+            message: "matchId e userGuestId são necessários"
+        })
+
         try {
             // Retorna a partida se além dela existir, o usuário que convidou também está inserido nela.
             const match = await db.match.findFirst({
@@ -149,7 +154,7 @@ const gameController = {
             }
 
             const invite = await db.$transaction(async (tx) => {
-                await tx.matchInvite.upsert({
+                return tx.matchInvite.upsert({
                     where: {
                         matchId_invitedId: {
                             matchId,

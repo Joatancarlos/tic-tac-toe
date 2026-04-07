@@ -5,5 +5,7 @@ import { authMiddleware } from "../config/middlewares/auth.js";
 
 router.post('/join', authMiddleware, gameController.joinMatch);
 router.post('/', authMiddleware, gameController.create);
+router.post('/invite', authMiddleware, gameController.invitePlayer);
+router.post('/decline-invite', authMiddleware, gameController.declineInvite)
 
 export default router;
