@@ -11,7 +11,6 @@ const errorHandler = (err, req, res, next) => {
         responseTime: req.responseTime,
         ip: req.ip,
         userAgent: req.headers["user-agent"] || null,
-        userId: req.user?.id || null,
         error: err.message || null,
     };
     console.log(log)

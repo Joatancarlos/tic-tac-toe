@@ -14,9 +14,11 @@ model User {
   tokenVersion Int        @default(0)
   status       UserStatus @default(OFFLINE)
 
-  HttpLog    HttpLog[]
-  Score      Score[]
-  User_Match User_Match[]
+  HttpLog         HttpLog[]
+  Score           Score[]
+  User_Match      User_Match[]
+  invitesReceived MatchInvite[] @relation("InvitedUser")
+  invitesSent     MatchInvite[] @relation("InviterUser")
 }
 
 enum UserStatus {
@@ -31,6 +33,7 @@ model Match {
 
   currentPlayerId String?
   User_Match      User_Match[]
+  MatchInvite     MatchInvite[]
 }
 
 model User_Match {
@@ -69,10 +72,30 @@ model HttpLog {
   userAgent    String?
   error        String?
   createdAt    DateTime @default(now())
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  User         User?    @relation(fields: [userId], references: [id])
+  userId       String?
 
   @@index([method])
   @@index([status])
   @@index([createdAt])
+}
+
+model MatchInvite {
+  id        String            @id @default(uuid())
+  matchId   String
+  invitedId String
+  invitedBy String
+  status    MatchInviteStatus @default(PENDING)
+
+  match   Match @relation(fields: [matchId], references: [id])
+  invited User  @relation("InvitedUser", fields: [invitedId], references: [id])
+  inviter User  @relation("InviterUser", fields: [invitedBy], references: [id])
+
+  @@unique([matchId, invitedId])
+}
+
+enum MatchInviteStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
 }

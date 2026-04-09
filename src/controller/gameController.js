@@ -1,4 +1,5 @@
 import {prisma as db} from '../lib/prisma.js';
+import {MatchInviteStatus, UserStatus} from "@prisma/client";
 
 const gameController = {
     create: async (req, res, next) => {
@@ -115,6 +116,138 @@ const gameController = {
             res.status(200).json({ message: 'Você saiu da partida.' });
         } catch (error) {
             next(error);
+        }
+    },
+
+    invitePlayer: async (req, res, next) => {
+        const { userId } = req.user;
+        const { matchId, userGuestId } = req.body;
+
+        if(!matchId || !userGuestId) return next({
+            status: 400,
+            message: "matchId e userGuestId são necessários"
+        })
+
+        try {
+            // Retorna a partida se além dela existir, o usuário que convidou também está inserido nela.
+            const match = await db.match.findFirst({
+                where: {
+                    id: matchId,
+                    User_Match: {
+                        some: { userId }
+                    }
+                }
+            });
+
+            if (!match) {
+                return next({
+                    status: 400,
+                    message: "Partida não encontrada ou usuário não está nela"
+                });
+            }
+
+            if (userId === userGuestId) {
+                return next({
+                    status: 400,
+                    message: "Você não pode convidar a si mesmo"
+                });
+            }
+
+            const isOnline = await db.user.findFirst({
+                where: {
+                    id: userGuestId,
+                    status: UserStatus.ONLINE
+                }
+            })
+
+            if (!isOnline) return next({
+                status: 400,
+                message: "usuário convidado não está online"
+            })
+
+            const invite = await db.$transaction(async (tx) => {
+                return tx.matchInvite.upsert({
+                    where: {
+                        matchId_invitedId: {
+                            matchId,
+                            invitedId: userGuestId
+                        }
+                    },
+                    update: {
+                        status: MatchInviteStatus.PENDING,
+                        invitedBy: userId
+                    },
+                    create: {
+                        matchId,
+                        invitedId: userGuestId,
+                        invitedBy: userId,
+                        status: MatchInviteStatus.PENDING
+                    }
+                });
+            });
+
+            return res.status(200).json({
+                message: "Convite enviado com sucesso",
+                invite
+            });
+
+        } catch (err) {
+            next(err)
+        }
+
+    },
+
+    declineInvite: async (req, res, next) => {
+        const { userId } = req.user;
+        const { matchId } = req.body;
+
+        try {
+            const invite = await db.matchInvite.findUnique({
+                where: {
+                    matchId_invitedId: {
+                        matchId,
+                        invitedId: userId
+                    }
+                }
+            });
+
+            if (!invite) {
+                return next({
+                    status: 404,
+                    message: "Convite não encontrado"
+                });
+            }
+
+            if (invite.status !== "PENDING") {
+                return next({
+                    status: 400,
+                    message: "Convite já foi respondido"
+                });
+            }
+
+            const updatedInvite = await db.matchInvite.update({
+                where: {
+                    matchId_invitedId: {
+                        matchId,
+                        invitedId: userId
+                    }
+                },
+                data: {
+                    status: "DECLINED"
+                }
+            });
+
+            return res.status(200).json({
+                message: "Convite recusado com sucesso",
+                invite: updatedInvite
+            });
+
+        } catch (err) {
+            console.error(err);
+            return next({
+                status: 500,
+                message: "Erro ao recusar convite"
+            });
         }
     }
 };
