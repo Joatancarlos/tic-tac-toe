@@ -1,15 +1,18 @@
 import {prisma as db} from '../lib/prisma.js';
-import {MatchInviteStatus, UserStatus} from "@prisma/client";
+const memoryBoards = {};
+import {GameStatus, MatchInviteStatus, UserStatus} from "@prisma/client";
+import GameController from "./gameController.js";
 
 const gameController = {
     create: async (req, res, next) => {
-        const { userId } = req.user;
+        const {userId} = req.user;
 
         try {
             const result = await db.$transaction(async (tx) => {
                 const match = await tx.match.create({
                     data: {
-                        status: 'WAITING',
+                        status: GameStatus.WAITING,
+                        currentPlayerId: userId
                     }
                 });
 
@@ -21,11 +24,11 @@ const gameController = {
                 });
 
                 await tx.user.update({
-                    where: { id: userId },
-                    data: { status: 'IN_MATCH' }
+                    where: {id: userId},
+                    data: {status: UserStatus.IN_MATCH}
                 });
 
-                return { match, userMatch };
+                return {match, userMatch};
             });
 
             res.status(201).json({
@@ -35,14 +38,14 @@ const gameController = {
             });
         } catch (e) {
             console.error(e);
-            res.status(500).json({ error: "Erro ao criar partida." });
+            res.status(500).json({error: "Erro ao criar partida."});
             next(e)
         }
     },
 
     joinMatch: async (req, res, next) => {
-        const { userId } = req.user;
-        const { matchId } = req.body;
+        const {userId} = req.user;
+        const {matchId} = req.body;
 
         if (!matchId) {
             return next({
@@ -53,8 +56,8 @@ const gameController = {
 
         try {
             const match = await db.match.findUnique({
-                where: { id: matchId },
-                include: { User_Match: true }
+                where: {id: matchId},
+                include: {User_Match: true}
             });
 
             if (!match) {
@@ -64,10 +67,10 @@ const gameController = {
                 })
             }
 
-            if (match.status !== 'WAITING') return next({ status: 400, error: "Esta partida já começou ou terminou." });
+            if (match.status !== 'WAITING') return next({status: 400, error: "Esta partida já começou ou terminou."});
 
             const alreadyIn = match.User_Match.some(m => m.userId === userId);
-            if (alreadyIn) return next({ status: 400, error: "Você já está nesta partida." });
+            if (alreadyIn) return next({status: 400, error: "Você já está nesta partida."});
 
             const result = await db.$transaction(async (tx) => {
                 const newUserMatch = await tx.user_Match.create({
@@ -78,15 +81,15 @@ const gameController = {
                 });
 
                 await tx.user.update({
-                    where: { id: userId },
-                    data: { status: 'IN_MATCH' }
+                    where: {id: userId},
+                    data: {status: GameStatus.ON_GOING}
                 });
 
                 return newUserMatch;
             });
 
             if (req.io) {
-                req.io.to(matchId).emit("playerJoined", { userId });
+                req.io.to(matchId).emit("playerJoined", {userId});
             }
 
             res.status(201).json({
@@ -99,24 +102,127 @@ const gameController = {
     },
 
     leaveMatch: async (req, res, next) => {
-        const { userId } = req.user;
-        const { matchId } = req.body;
+        const {userId} = req.user;
+        const {matchId} = req.body;
 
         try {
             await db.$transaction([
                 db.user_Match.deleteMany({
-                    where: { userId, matchId }
+                    where: {userId, matchId}
                 }),
                 db.user.update({
-                    where: { id: userId },
-                    data: { status: 'ONLINE' }
+                    where: {id: userId},
+                    data: {status: 'ONLINE'}
                 })
             ]);
 
-            res.status(200).json({ message: 'Você saiu da partida.' });
+            res.status(200).json({message: 'Você saiu da partida.'});
         } catch (error) {
             next(error);
         }
+    },
+
+    playTurn: async (req, res, next) => {
+        const { userId } = req.user;
+        const { matchId, position } = req.body;
+
+
+        try {
+            const match = await db.match.findUnique({
+                where: { id: matchId },
+                include: { User_Match: true }
+            });
+
+            if (!match) return res.status(404).json({ error: "Match not found" });
+            if (match.status !== "ON_GOING") return res.status(400).json({ error: "Match is not active" });
+            if (match.currentPlayerId !== userId) return res.status(403).json({ error: "It's not your turn" });
+
+            if (!memoryBoards[matchId]) {
+                memoryBoards[matchId] = Array(9).fill(null);
+            }
+            const board = memoryBoards[matchId];
+
+            if (board[position] !== null) return res.status(400).json({ error: "Position already taken" });
+
+            board[position] = userId;
+
+            const winnerId = GameController.checkWin(board);
+            const isDraw = !winnerId && board.every(cell => cell !== null);
+
+            if (winnerId || isDraw) {
+                await db.match.update({
+                    where: { id: matchId },
+                    data: { status: GameStatus.FINISHED, currentPlayerId: null }
+                });
+
+                if (winnerId) {
+                    await db.score.updateMany({
+                        where: { userId: winnerId },
+                        data: { victories: { increment: 1 } }
+                    });
+                } else if (isDraw) {
+                    const playerIds = match.User_Match.map(um => um.userId);
+                    await db.score.updateMany({
+                        where: { userId: { in: playerIds } },
+                        data: { draw: { increment: 1 } }
+                    });
+                }
+
+                delete memoryBoards[matchId];
+
+                if (req.io) {
+                    req.io.to(matchId).emit("gameOver", { winnerId, isDraw, finalBoard: board });
+                }
+
+                return res.status(200).json({ message: "Game over" });
+            }
+
+            const nextPlayer = match.User_Match.find(um => um.userId !== userId);
+
+            await db.match.update({
+                where: { id: matchId },
+                data: { currentPlayerId: nextPlayer.userId }
+            });
+
+            if (req.io) {
+                req.io.to(matchId).emit("gameStateUpdated", {
+                    board,
+                    nextPlayerId: nextPlayer.userId,
+                    lastPlay: position
+                });
+            }
+
+            res.status(200).json({ message: "Turn played successfully", nextPlayer: nextPlayer.userId });
+        } catch (e) {
+            next(e);
+        }
+    },
+    checkWin: (board) =>  {
+        const winningCombinations = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6]
+        ];
+
+        for (const [a, b, c] of winningCombinations) {
+            if (
+                board[a] !== null &&
+                board[a] === board[b] &&
+                board[a] === board[c]
+            ) {
+                return board[a];
+            }
+        }
+    },
+
+    getNextPlayerId: async (gameId, currentUserId) => {
+        const players = await db.Match.findMany({where: {id: gameId}});
+        return players.filter(p => p.id !== currentUserId)[0].id;
     },
 
     invitePlayer: async (req, res, next) => {
