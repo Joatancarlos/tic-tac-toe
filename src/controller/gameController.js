@@ -1,6 +1,7 @@
 import {prisma as db} from '../lib/prisma.js';
 const memoryBoards = {};
-import {MatchInviteStatus, UserStatus} from "@prisma/client";
+import {GameStatus, MatchInviteStatus, UserStatus} from "@prisma/client";
+import GameController from "./gameController.js";
 
 const gameController = {
     create: async (req, res, next) => {
@@ -10,7 +11,8 @@ const gameController = {
             const result = await db.$transaction(async (tx) => {
                 const match = await tx.match.create({
                     data: {
-                        status: 'WAITING',
+                        status: GameStatus.WAITING,
+                        currentPlayerId: userId
                     }
                 });
 
@@ -23,7 +25,7 @@ const gameController = {
 
                 await tx.user.update({
                     where: {id: userId},
-                    data: {status: 'IN_MATCH'}
+                    data: {status: UserStatus.IN_MATCH}
                 });
 
                 return {match, userMatch};
@@ -144,7 +146,7 @@ const gameController = {
 
             board[position] = userId;
 
-            const winnerId = checkWin(board);
+            const winnerId = GameController.checkWin(board);
             const isDraw = !winnerId && board.every(cell => cell !== null);
 
             if (winnerId || isDraw) {
@@ -193,6 +195,28 @@ const gameController = {
             res.status(200).json({ message: "Turn played successfully", nextPlayer: nextPlayer.userId });
         } catch (e) {
             next(e);
+        }
+    },
+    checkWin: (board) =>  {
+        const winningCombinations = [
+            [0, 1, 2],
+            [3, 4, 5],
+            [6, 7, 8],
+            [0, 3, 6],
+            [1, 4, 7],
+            [2, 5, 8],
+            [0, 4, 8],
+            [2, 4, 6]
+        ];
+
+        for (const [a, b, c] of winningCombinations) {
+            if (
+                board[a] !== null &&
+                board[a] === board[b] &&
+                board[a] === board[c]
+            ) {
+                return board[a];
+            }
         }
     },
 
