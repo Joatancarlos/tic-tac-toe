@@ -82,7 +82,7 @@ const gameController = {
 
                 await tx.user.update({
                     where: {id: userId},
-                    data: {status: 'IN_MATCH'}
+                    data: {status: GameStatus.ON_GOING}
                 });
 
                 return newUserMatch;
@@ -152,7 +152,7 @@ const gameController = {
             if (winnerId || isDraw) {
                 await db.match.update({
                     where: { id: matchId },
-                    data: { status: "FINISHED", currentPlayerId: null }
+                    data: { status: GameStatus.FINISHED, currentPlayerId: null }
                 });
 
                 if (winnerId) {
