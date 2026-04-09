@@ -1,5 +1,5 @@
 import {prisma as db} from '../lib/prisma.js';
-import {MatchInviteStatus} from "@prisma/client";
+import {MatchInviteStatus, UserStatus} from "@prisma/client";
 
 const gameController = {
     create: async (req, res, next) => {
@@ -152,6 +152,18 @@ const gameController = {
                     message: "Você não pode convidar a si mesmo"
                 });
             }
+
+            const isOnline = await db.user.findFirst({
+                where: {
+                    id: userGuestId,
+                    status: UserStatus.ONLINE
+                }
+            })
+
+            if (!isOnline) return next({
+                status: 400,
+                message: "usuário convidado não está online"
+            })
 
             const invite = await db.$transaction(async (tx) => {
                 return tx.matchInvite.upsert({
