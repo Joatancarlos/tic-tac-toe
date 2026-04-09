@@ -5,5 +5,6 @@ import { authMiddleware } from "../config/middlewares/auth.js";
 
 router.post('/join', authMiddleware, gameController.joinMatch);
 router.post('/', authMiddleware, gameController.create);
+router.post('/play', authMiddleware, gameController.playTurn);
 
 export default router;
