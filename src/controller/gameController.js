@@ -82,7 +82,12 @@ const gameController = {
 
                 await tx.user.update({
                     where: {id: userId},
-                    data: {status: GameStatus.ON_GOING}
+                    data: {status: UserStatus.IN_MATCH}
+                });
+
+                await tx.match.update({
+                    where: { id: matchId },
+                    data: { status: GameStatus.ON_GOING }
                 });
 
                 return newUserMatch;
@@ -134,7 +139,7 @@ const gameController = {
             });
 
             if (!match) return res.status(404).json({ error: "Match not found" });
-            if (match.status !== "ON_GOING") return res.status(400).json({ error: "Match is not active" });
+            if (match.status !== GameStatus.ON_GOING) return res.status(400).json({ error: "Match is not active" });
             if (match.currentPlayerId !== userId) return res.status(403).json({ error: "It's not your turn" });
 
             if (!memoryBoards[matchId]) {
