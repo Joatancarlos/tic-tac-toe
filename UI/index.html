@@ -20,6 +20,26 @@
         /* Controle de visibilidade das seções */
         .section { display: none; }
         .active { display: block; }
+
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+            background: #f1f1f1;
+            font-size: 14px;
+        }
+
+        .ranking-item.me {
+            background: #d4edda;
+            font-weight: bold;
+        }
+
+        .ranking-position {
+            font-weight: bold;
+            margin-right: 10px;
+        }
     </style>
 </head>
 <body>
@@ -42,6 +62,13 @@
         <hr>
         <input type="text" id="matchIdInput" placeholder="ID da Partida">
         <button onclick="joinMatch()">Entrar na Partida</button>
+        <hr>
+
+        <h3> Ranking de Jogadores</h3>
+
+        <div id="rankingContainer" style="margin-top: 10px;">
+            <div id="rankingList"></div>
+        </div>
     </div>
 
     <div id="game-section" class="section">
@@ -108,6 +135,7 @@
             initSocket();
             document.getElementById('welcomeMsg').innerText = `Olá, ${me.username}!`;
             switchSection('lobby-section');
+            loadRanking();
         } catch (e) { showMsg(e.message); }
     }
 
@@ -250,6 +278,48 @@
             .catch(() => {
                 showMsg("Erro ao copiar o ID.");
             });
+    }
+
+    async function loadRanking() {
+        try {
+            // pega ranking
+            const ranking = await apiFetch('/scoreboard');
+
+            // pega usuário atual
+            const me = await apiFetch('/players/me');
+
+            renderRanking(ranking, me);
+        } catch (e) {
+            console.error(e);
+            showMsg("Erro ao carregar ranking");
+        }
+    }
+
+    function renderRanking(ranking, me) {
+        const container = document.getElementById('rankingList');
+        container.innerHTML = '';
+
+        ranking.forEach((player, index) => {
+            const div = document.createElement('div');
+            div.className = 'ranking-item';
+
+            // destaca o próprio usuário
+            if (player.userId === me.id) {
+                div.classList.add('me');
+            }
+
+            div.innerHTML = `
+            <span>
+                <span class="ranking-position">#${index + 1}</span>
+                ${player.user.username}
+            </span>
+            <span>
+                 ${player.victories} |  ${player.draw}
+            </span>
+        `;
+
+            container.appendChild(div);
+        });
     }
 </script>
 </body>
