@@ -260,9 +260,36 @@
         }
     }
 
-    function leaveMatch() {
-        currentMatchId = null;
-        switchSection('lobby-section');
+    async function leaveMatch() {
+        if (!currentMatchId) {
+            switchSection('lobby-section');
+            return;
+        }
+
+        try {
+            // Faz a requisição para o back-end informando que o usuário quer sair
+            await apiFetch('/game/leave', 'POST', { matchId: currentMatchId });
+
+            // Opcional: Se o seu servidor Socket.io tiver um evento configurado para sair da sala
+            if (socket) {
+                // socket.emit('leaveRoom', currentMatchId);
+            }
+
+            showMsg("Você saiu da partida.");
+        } catch (e) {
+            showMsg("Erro ao sair da partida: " + e.message);
+        } finally {
+            // Reseta o estado local do jogo independentemente de sucesso ou erro
+            currentMatchId = null;
+            isMyTurn = false;
+
+            // Reseta os textos da interface
+            document.getElementById('turnIndicator').innerText = "Aguardando oponente...";
+
+            // Volta para o Lobby e recarrega o ranking
+            switchSection('lobby-section');
+            loadRanking();
+        }
     }
 
     function copyMatchId() {
