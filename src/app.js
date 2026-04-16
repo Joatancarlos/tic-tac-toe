@@ -38,22 +38,22 @@ app.use(errorHandler);
 
 
 
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
     console.log("Client connected:", socket.id);
 
-    broadcastOnlinePlayers(io)
+    await broadcastOnlinePlayers(io)
     // Quando o frontend pedir para entrar na sala da partida
     socket.on("joinRoom", (matchId) => {
         socket.join(matchId);
         console.log(`Socket ${socket.id} entrou na sala da partida: ${matchId}`);
     });
 
-    socket.on("disconnect", () => {
+    socket.on("disconnect", async () => {
         console.log("Client disconnected:", socket.id);
-        broadcastOnlinePlayers(io)
+        await broadcastOnlinePlayers(io)
     });
 
-    socket.on('playersOnlineUpdated', (players) => {
+    socket.on('playersOnlineUpdated', async (players) => {
         renderOnlinePlayers(players);
     });
 });
