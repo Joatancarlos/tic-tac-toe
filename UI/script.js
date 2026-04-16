@@ -67,13 +67,12 @@ async function register() {
 
 function initSocket() {
     if (socket) socket.disconnect();
-    // Conecta ao socket enviando o token para autenticação, se o backend exigir
     socket = io(SOCKET_URL, { auth: { token } });
 
     socket.on('playerJoined', (data) => {
         showMsg('Um jogador entrou na partida!');
         document.getElementById('turnIndicator').innerText = "O jogo começou! É a sua vez.";
-        isMyTurn = true; // Assumindo que o criador joga primeiro (baseado no seu backend currentPlayerId)
+        isMyTurn = true;
     });
 
     socket.on('gameStateUpdated', (data) => {
@@ -82,15 +81,47 @@ function initSocket() {
         document.getElementById('turnIndicator').innerText = isMyTurn ? "Sua vez!" : "Vez do oponente...";
     });
 
-    socket.on('gameOver', (data) => {
+    socket.on('gameOver', async (data) => {
         updateBoardState(data.finalBoard);
         isMyTurn = false;
+
         if (data.isDraw) {
             document.getElementById('turnIndicator').innerText = "Deu Velha! Empate.";
+
+            // Para não duplicar pontos no banco, apenas o criador da sala ('X') envia a requisição de empate
+            if (mySymbol === 'X') {
+                // Extrai os dois IDs únicos jogados no tabuleiro, ignorando os 'null'
+                const playersOnBoard = [...new Set(data.finalBoard.filter(id => id !== null))];
+
+                if (playersOnBoard.length === 2) {
+                    try {
+                        await apiFetch('/scoreboard/draw', 'POST', {
+                            player1Id: playersOnBoard[0],
+                            player2Id: playersOnBoard[1]
+                        });
+                    } catch (e) {
+                        console.error("Erro ao registrar empate:", e);
+                    }
+                }
+            }
         } else {
             const won = data.winnerId === myUserId;
             document.getElementById('turnIndicator').innerText = won ? "Você Venceu! 🎉" : "Você Perdeu! 😢";
+
+            // Apenas o cliente do vencedor avisa o banco de dados da vitória
+            if (won) {
+                try {
+                    await apiFetch('/scoreboard/win', 'POST', { winnerId: myUserId });
+                } catch (e) {
+                    console.error("Erro ao registrar vitória:", e);
+                }
+            }
         }
+
+        // Atualiza o ranking para refletir o novo placar (espera 1 segundinho para dar tempo do backend salvar)
+        setTimeout(() => {
+            loadRanking();
+        }, 1000);
     });
 }
 
@@ -126,7 +157,25 @@ async function joinMatch() {
         isMyTurn = false;
     } catch (e) { showMsg(e.message); }
 }
+function logout() {
+    token = null;
+    myUserId = null;
+    currentMatchId = null;
+    mySymbol = 'X';
+    isMyTurn = false;
 
+    if (socket) {
+        socket.disconnect();
+        socket = null;
+    }
+
+    document.getElementById('username').value = '';
+    document.getElementById('password').value = '';
+    document.getElementById('welcomeMsg').innerText = '';
+
+    switchSection('auth-section');
+    showMsg("Você saiu da sua conta com sucesso.");
+}
 function setupGameUI() {
     document.getElementById('displayMatchId').innerText = currentMatchId;
     const boardEl = document.getElementById('board');
@@ -175,9 +224,36 @@ function updateBoardState(boardArray) {
     }
 }
 
-function leaveMatch() {
-    currentMatchId = null;
-    switchSection('lobby-section');
+async function leaveMatch() {
+    if (!currentMatchId) {
+        switchSection('lobby-section');
+        return;
+    }
+
+    try {
+        // Faz a requisição para o back-end informando que o usuário quer sair
+        await apiFetch('/game/leave', 'POST', { matchId: currentMatchId });
+
+        // Opcional: Se o seu servidor Socket.io tiver um evento configurado para sair da sala
+        if (socket) {
+            // socket.emit('leaveRoom', currentMatchId);
+        }
+
+        showMsg("Você saiu da partida.");
+    } catch (e) {
+        showMsg("Erro ao sair da partida: " + e.message);
+    } finally {
+        // Reseta o estado local do jogo independentemente de sucesso ou erro
+        currentMatchId = null;
+        isMyTurn = false;
+
+        // Reseta os textos da interface
+        document.getElementById('turnIndicator').innerText = "Aguardando oponente...";
+
+        // Volta para o Lobby e recarrega o ranking
+        switchSection('lobby-section');
+        loadRanking();
+    }
 }
 
 function copyMatchId() {
