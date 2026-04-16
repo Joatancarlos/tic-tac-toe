@@ -16,9 +16,11 @@ const scoreController = {
 
             if (!newScore) {
                 newScore = await db.score.create({
-                    userId: winnerId,
-                    victories: 1,
-                    draw: 0
+                    data: {
+                        userId: winnerId,
+                        victories: 1,
+                        draw: 0
+                    }
                 })
             } else {
                 newScore = await db.score.update({

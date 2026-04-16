@@ -117,7 +117,7 @@ const gameController = {
                 }),
                 db.user.update({
                     where: {id: userId},
-                    data: {status: 'ONLINE'}
+                    data: {status: UserStatus.ONLINE}
                 })
             ]);
 
