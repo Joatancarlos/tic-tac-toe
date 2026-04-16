@@ -113,7 +113,9 @@ const playerController = {
                     username: true,
                 }
             });
-
+            if (req.io) {
+                req.io.emit('playersOnlineUpdated', user);
+            }
             res.json(user);
         } catch (error) {
             next(error);

@@ -49,7 +49,8 @@ async function login() {
         initSocket();
         document.getElementById('welcomeMsg').innerText = `Olá, ${me.username}!`;
         switchSection('lobby-section');
-        loadRanking();
+        await loadRanking();
+        await loadOnlinePlayers();
     } catch (e) { showMsg(e.message); }
 }
 
@@ -234,4 +235,65 @@ function renderRanking(ranking, me) {
 
         container.appendChild(div);
     });
+}
+
+async function loadOnlinePlayers() {
+    try {
+        const players = await apiFetch('/players/online');
+        renderOnlinePlayers(players);
+    } catch (e) {
+        console.error(e);
+        showMsg("Erro ao carregar jogadores online");
+    }
+}
+
+function renderOnlinePlayers(players) {
+    const container = document.getElementById('activity-players');
+
+    container.innerHTML = `
+        <h3>Jogadores online</h3>
+    `;
+
+    players
+        .filter(player => player.id !== myUserId) // 🔥 remove você mesmo
+        .forEach(player => {
+            const div = document.createElement('div');
+            div.className = 'ranking-item';
+
+            div.innerHTML = `
+                <span>${player.username}</span>
+                <button onclick="invitePlayer('${player.id}')">
+                    Convidar
+                </button>
+            `;
+
+            container.appendChild(div);
+        });
+}
+
+async function invitePlayer(userGuestId) {
+    if (!currentMatchId) {
+        showMsg("Você precisa estar em uma partida para convidar!");
+        return;
+    }
+
+    try {
+        await apiFetch('/match/invite', 'POST', {
+            matchId: currentMatchId,
+            userGuestId
+        });
+
+        showMsg("Convite enviado!");
+    } catch (e) {
+        showMsg(e.message);
+    }
+}
+
+async function declineInvite(matchId) {
+    try {
+        await apiFetch('/match/decline', 'POST', { matchId });
+        showMsg("Convite recusado!");
+    } catch (e) {
+        showMsg(e.message);
+    }
 }
