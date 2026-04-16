@@ -54,6 +54,7 @@ async function login() {
     try {
         const data = await apiFetch('/auth/login', 'POST', { username: u, password: p });
         token = data.token;
+        localStorage.setItem('game_token', token)
 
         // Buscar dados do usuário logado para saber o próprio ID
         const me = await apiFetch('/players/me');
@@ -173,6 +174,7 @@ async function joinMatch(matchId) {
 }
 
 function logout() {
+    localStorage.removeItem('game_token');
     token = null;
     myUserId = null;
     currentMatchId = null;
@@ -300,6 +302,41 @@ async function loadRanking() {
         showMsg("Erro ao carregar ranking", "error");
     }
 }
+
+
+async function checkSession() {
+    const savedToken = localStorage.getItem('game_token');
+
+    if (!savedToken) {
+        console.log("Nenhuma sessão encontrada.");
+        return;
+    }
+
+    try {
+        token = savedToken;
+
+        const me = await apiFetch('/players/me');
+
+        if (me && me.id) {
+            myUserId = me.id;
+
+            initSocket();
+            document.getElementById('welcomeMsg').innerText = `Olá, ${me.username}!`;
+            switchSection('lobby-section');
+            loadRanking();
+
+            console.log("Sessão restaurada para o usuário:", me.username);
+        }
+    } catch (e) {
+        console.warn("Falha ao restaurar sessão automática:", e.message);
+        localStorage.removeItem('game_token');
+        token = null;
+        switchSection('auth-section');
+    }
+}
+window.onload = () => {
+    checkSession();
+};
 
 function renderRanking(ranking, me) {
     const container = document.getElementById('rankingList');
