@@ -58,6 +58,9 @@
 
     <div id="lobby-section" class="section">
         <h3 id="welcomeMsg"></h3>
+
+        <button onclick="logout()" style="background: #dc3545; margin-bottom: 15px;">Sair da Conta</button>
+
         <button onclick="createMatch()">Criar Nova Partida</button>
         <hr>
         <input type="text" id="matchIdInput" placeholder="ID da Partida">
@@ -242,7 +245,25 @@
             isMyTurn = false;
         } catch (e) { showMsg(e.message); }
     }
+    function logout() {
+        token = null;
+        myUserId = null;
+        currentMatchId = null;
+        mySymbol = 'X';
+        isMyTurn = false;
 
+        if (socket) {
+            socket.disconnect();
+            socket = null;
+        }
+
+        document.getElementById('username').value = '';
+        document.getElementById('password').value = '';
+        document.getElementById('welcomeMsg').innerText = '';
+
+        switchSection('auth-section');
+        showMsg("Você saiu da sua conta com sucesso.");
+    }
     function setupGameUI() {
         document.getElementById('displayMatchId').innerText = currentMatchId;
         const boardEl = document.getElementById('board');
