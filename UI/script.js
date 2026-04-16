@@ -278,7 +278,7 @@ async function invitePlayer(userGuestId) {
     }
 
     try {
-        await apiFetch('/match/invite', 'POST', {
+        await apiFetch('/game/invite', 'POST', {
             matchId: currentMatchId,
             userGuestId
         });
@@ -291,7 +291,7 @@ async function invitePlayer(userGuestId) {
 
 async function declineInvite(matchId) {
     try {
-        await apiFetch('/match/decline', 'POST', { matchId });
+        await apiFetch('/game/decline-invite', 'POST', { matchId });
         showMsg("Convite recusado!");
     } catch (e) {
         showMsg(e.message);
