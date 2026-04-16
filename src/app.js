@@ -9,6 +9,7 @@ import scoreRoutes from "./routes/scoreRoutes.js";
 import {Server} from "socket.io";
 import * as http from "node:http";
 import cors from 'cors';
+import {broadcastOnlinePlayers} from "./service/socketService.js";
 
 const app = express();
 const server = http.createServer(app);
@@ -40,6 +41,7 @@ app.use(errorHandler);
 io.on("connection", (socket) => {
     console.log("Client connected:", socket.id);
 
+    broadcastOnlinePlayers(io)
     // Quando o frontend pedir para entrar na sala da partida
     socket.on("joinRoom", (matchId) => {
         socket.join(matchId);
@@ -48,6 +50,11 @@ io.on("connection", (socket) => {
 
     socket.on("disconnect", () => {
         console.log("Client disconnected:", socket.id);
+        broadcastOnlinePlayers(io)
+    });
+
+    socket.on('playersOnlineUpdated', (players) => {
+        renderOnlinePlayers(players);
     });
 });
 server.listen(process.env.PORT || 3000, () => {

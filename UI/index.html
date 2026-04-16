@@ -22,20 +22,20 @@
     </div>
 
     <div id="lobby-section" class="section">
-        <h3 id="welcomeMsg"></h3>
+        <div class="match">
+            <h3 id="welcomeMsg"></h3>
+            <button onclick="createMatch()">Criar Nova Partida</button>
+            <button onclick="logout()" style="background: #dc3545; margin-bottom: 15px;">Sair da Conta</button>
+            <hr>
+            <input type="text" id="matchIdInput" placeholder="ID da Partida">
+            <button onclick="joinMatch()">Entrar na Partida</button>
+        </div>
+        <div class="ranking">
+            <h3> Ranking de Jogadores</h3>
 
-        <button onclick="logout()" style="background: #dc3545; margin-bottom: 15px;">Sair da Conta</button>
-
-        <button onclick="createMatch()">Criar Nova Partida</button>
-        <hr>
-        <input type="text" id="matchIdInput" placeholder="ID da Partida">
-        <button onclick="joinMatch()">Entrar na Partida</button>
-        <hr>
-
-        <h3> Ranking de Jogadores</h3>
-
-        <div id="rankingContainer" style="margin-top: 10px;">
-            <div id="rankingList"></div>
+            <div id="rankingContainer" style="margin-top: 10px;">
+                <div id="rankingList"></div>
+            </div>
         </div>
     </div>
 
@@ -48,6 +48,9 @@
         <div class="board" id="board">
         </div>
         <button onclick="leaveMatch()" style="background: #dc3545; margin-top: 20px;">Sair da Partida</button>
+        <div id="activity-players" class="jogadores-online">
+            <h3>Jogadores online</h3>
+        </div>
     </div>
 </div>
 
