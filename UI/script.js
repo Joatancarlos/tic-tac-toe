@@ -78,7 +78,6 @@ async function register() {
     } catch (e) { showMsg(e.message, 'error'); }
 }
 
-// --- SOCKET.IO ---
 
 function initSocket() {
     if (socket) socket.disconnect();
@@ -95,6 +94,10 @@ function initSocket() {
         isMyTurn = data.nextPlayerId === myUserId;
         document.getElementById('turnIndicator').innerText = isMyTurn ? "Sua vez!" : "Vez do oponente...";
     });
+
+    socket.on("playersOnlineUpdated", (players) => {
+        renderOnlinePlayers(players);
+    })
 
     socket.on('gameOver', async (data) => {
         updateBoardState(data.finalBoard);
@@ -182,10 +185,11 @@ function logout() {
     isMyTurn = false;
 
     if (socket) {
+        socket.emit("disconnect")
         socket.disconnect();
         socket = null;
     }
-
+    location.reload();
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
     document.getElementById('welcomeMsg').innerText = '';
@@ -410,6 +414,10 @@ async function invitePlayer(userGuestId) {
             matchId: currentMatchId,
             userGuestId
         });
+
+        if (socket) {
+            socket.emit('invitePlayer', { userGuestId, matchId: currentMatchId});
+        }
 
         showMsg("Convite enviado!", "success");
     } catch (e) {

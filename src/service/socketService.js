@@ -8,3 +8,16 @@ export async function broadcastOnlinePlayers(io) {
 
     io.emit('playersOnlineUpdated', users);
 }
+
+
+export const setUserOffline = async (userId) => {
+    await db.user.update({
+        where: { id: userId },
+        data: {
+            tokenVersion: {
+                increment: 1
+            },
+            status: UserStatus.OFFLINE
+        }
+    });
+};

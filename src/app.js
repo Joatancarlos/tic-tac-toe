@@ -9,7 +9,8 @@ import scoreRoutes from "./routes/scoreRoutes.js";
 import {Server} from "socket.io";
 import * as http from "node:http";
 import cors from 'cors';
-import {broadcastOnlinePlayers} from "./service/socketService.js";
+import {broadcastOnlinePlayers, setUserOffline} from "./service/socketService.js";
+import jwt from "jsonwebtoken";
 
 const app = express();
 const server = http.createServer(app);
@@ -38,8 +39,17 @@ app.use(errorHandler);
 
 
 
-io.on("connection", async (socket) => {
+io.on("connection",   async (socket) => {
     console.log("Client connected:", socket.id);
+
+    const token = socket.handshake.auth?.token;
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        socket.userId = decoded.userId;
+    } catch (err) {
+        socket.disconnect();
+    }
 
     await broadcastOnlinePlayers(io)
     // Quando o frontend pedir para entrar na sala da partida
@@ -48,14 +58,22 @@ io.on("connection", async (socket) => {
         console.log(`Socket ${socket.id} entrou na sala da partida: ${matchId}`);
     });
 
-    socket.on("disconnect", async () => {
+    socket.on("disconnect",  async () => {
         console.log("Client disconnected:", socket.id);
+        if (socket.userId) {
+            await setUserOffline(socket.userId);
+        }
         await broadcastOnlinePlayers(io)
     });
 
-    socket.on('playersOnlineUpdated', async (players) => {
-        renderOnlinePlayers(players);
+    socket.on('playersOnlineUpdated',  (players) => {
+        console.log("método sendo chamado")
+
     });
+
+    socket.on("invitePlayer", (data) => {
+        console.log("Invite player:", data);
+    })
 });
 server.listen(process.env.PORT || 3000, () => {
     console.log(`Server running on port ${process.env.PORT || 3000}`);
