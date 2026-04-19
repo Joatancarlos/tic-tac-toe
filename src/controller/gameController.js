@@ -353,8 +353,7 @@ const gameController = {
     },
 
     declineInvite: async (req, res, next) => {
-        const { userId } = req.user;
-        const { matchId } = req.body;
+        const { matchId, userId } = req.body;
 
         try {
             const invite = await db.matchInvite.findUnique({
@@ -373,7 +372,7 @@ const gameController = {
                 });
             }
 
-            if (invite.status !== "PENDING") {
+            if (invite.status !== MatchInviteStatus.PENDING) {
                 return next({
                     status: 400,
                     message: "Convite já foi respondido"
@@ -388,7 +387,7 @@ const gameController = {
                     }
                 },
                 data: {
-                    status: "DECLINED"
+                    status: MatchInviteStatus.DECLINED
                 }
             });
 
@@ -402,6 +401,58 @@ const gameController = {
             return next({
                 status: 500,
                 message: "Erro ao recusar convite"
+            });
+        }
+    },
+    acceptInvite: async (req, res, next) => {
+        const { matchId, userId } = req.body;
+
+        try {
+            const invite = await db.matchInvite.findUnique({
+                where: {
+                    matchId_invitedId: {
+                        matchId,
+                        invitedId: userId
+                    }
+                }
+            });
+
+            if (!invite) {
+                return next({
+                    status: 404,
+                    message: "Convite não encontrado"
+                });
+            }
+
+            if (invite.status !== MatchInviteStatus.PENDING) {
+                return next({
+                    status: 400,
+                    message: "Convite já foi respondido"
+                });
+            }
+
+            const updatedInvite = await db.matchInvite.update({
+                where: {
+                    matchId_invitedId: {
+                        matchId,
+                        invitedId: userId
+                    }
+                },
+                data: {
+                    status: MatchInviteStatus.ACCEPTED
+                }
+            });
+
+            return res.status(200).json({
+                message: "Convite aceito com sucesso",
+                invite: updatedInvite
+            });
+
+        } catch (err) {
+            console.error(err);
+            return next({
+                status: 500,
+                message: "Erro ao aceitar o convite"
             });
         }
     }

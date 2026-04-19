@@ -23,7 +23,7 @@ async function apiFetch(endpoint, method = 'GET', body = null) {
     return data;
 }
 
-function showMsg(title, icon, showConfirmButton = false) {
+function showMsg(title, icon, showConfirmButton = false, invite = {}) {
     Swal.fire({
         position: "top-end",
         icon: icon,
@@ -32,12 +32,15 @@ function showMsg(title, icon, showConfirmButton = false) {
         showCancelButton: showConfirmButton,
         confirmButtonText: "Aceitar",
         cancelButtonText: "Cancel!",
-        timer: showConfirmButton ? 4000 : 1500,
+        timer: showConfirmButton ? 10000 : 1500,
         toast: true,
         timerProgressBar: true
     }).then((result) => {
-        if (result.isConfirmed) { joinMatch(matchId) }
-        else if (result.dimiss === Swal.DismissReason.cancel) {}
+        if (result.isConfirmed) {
+            joinMatch(invite.matchId)
+            acceptInvite(invite.matchId, invite.invitedId)
+        }
+        else if (result.dismiss === Swal.DismissReason.cancel) { declineInvite(invite.matchId, invite.invitedId); }
     });
 }
 
@@ -152,6 +155,12 @@ function initSocket() {
             loadRanking();
         }, 1000);
     });
+    socket.on("gambiarra", (invite) => {
+        console.log("Gambiarra: ", );
+        if (invite.invitedId === myUserId) {
+            showMsg("Quer dar uma jogadinha?", "success", true, invite)
+        }
+    })
 }
 
 // --- GAME LOBBY ---
@@ -284,7 +293,7 @@ async function leaveMatch() {
 
         // Volta para o Lobby e recarrega o ranking
         switchSection('lobby-section');
-        loadRanking();
+        await loadRanking();
     }
 }
 
@@ -421,13 +430,13 @@ async function invitePlayer(userGuestId) {
     }
 
     try {
-        await apiFetch('/game/invite', 'POST', {
+        const {invite} = await apiFetch('/game/invite', 'POST', {
             matchId: currentMatchId,
-            userGuestId
+            userGuestId,
         });
 
         if (socket) {
-            socket.emit('invitePlayer', { userGuestId, matchId: currentMatchId});
+            socket.emit('invitePlayer', invite);
         }
 
         showMsg("Convite enviado!", "success");
@@ -436,10 +445,18 @@ async function invitePlayer(userGuestId) {
     }
 }
 
-async function declineInvite(matchId) {
+async function declineInvite(matchId, userId) {
     try {
-        await apiFetch('/game/decline-invite', 'POST', { matchId });
-        showMsg("Convite recusado!");
+        await apiFetch('/game/decline-invite', 'POST', { matchId, userId });
+        showMsg("Convite recusado!", "info");
+    } catch (e) {
+        showMsg(e.message, "error");
+    }
+}
+
+async function acceptInvite(matchId, userId) {
+    try {
+        await apiFetch('/game/accept-invite', 'POST', { matchId, userId });
     } catch (e) {
         showMsg(e.message, "error");
     }
