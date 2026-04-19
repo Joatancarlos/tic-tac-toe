@@ -1,14 +1,14 @@
-const API_URL = 'http://localhost:3000/api'; // Ajuste para a URL do seu backend
-const SOCKET_URL = 'http://localhost:3000';  // Ajuste para a URL do seu backend
+const API_URL = 'http://localhost:3000/api';
+const SOCKET_URL = 'http://localhost:3000';
 
 let token = null;
 let myUserId = null;
 let currentMatchId = null;
 let socket = null;
-let mySymbol = 'X'; // O criador será X, o convidado será O
+let mySymbol = 'X';
 let isMyTurn = false;
 
-// Utilitário para fazer requisições
+
 async function apiFetch(endpoint, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -23,9 +23,22 @@ async function apiFetch(endpoint, method = 'GET', body = null) {
     return data;
 }
 
-function showMsg(msg) {
-    document.getElementById('statusMsg').innerText = msg;
-    setTimeout(() => document.getElementById('statusMsg').innerText = '', 3000);
+function showMsg(title, icon, showConfirmButton = false) {
+    Swal.fire({
+        position: "top-end",
+        icon: icon,
+        title: title,
+        showConfirmButton: showConfirmButton,
+        showCancelButton: showConfirmButton,
+        confirmButtonText: "Aceitar",
+        cancelButtonText: "Cancel!",
+        timer: showConfirmButton ? 4000 : 1500,
+        toast: true,
+        timerProgressBar: true
+    }).then((result) => {
+        if (result.isConfirmed) { joinMatch(matchId) }
+        else if (result.dimiss === Swal.DismissReason.cancel) {}
+    });
 }
 
 function switchSection(sectionId) {
@@ -52,7 +65,8 @@ async function login() {
         switchSection('lobby-section');
         await loadRanking();
         await loadOnlinePlayers();
-    } catch (e) { showMsg(e.message); }
+        showMsg("Login realizado com sucesso", "success")
+    } catch (e) { showMsg(e.message, 'error'); }
 }
 
 async function register() {
@@ -60,18 +74,17 @@ async function register() {
     const p = document.getElementById('password').value;
     try {
         await apiFetch('/players', 'POST', { username: u, password: p });
-        showMsg("Registrado com sucesso! Faça login.");
-    } catch (e) { showMsg(e.message); }
+        showMsg("Registrado com sucesso! Faça login.", "success");
+    } catch (e) { showMsg(e.message, 'error'); }
 }
 
-// --- SOCKET.IO ---
 
 function initSocket() {
     if (socket) socket.disconnect();
     socket = io(SOCKET_URL, { auth: { token } });
 
     socket.on('playerJoined', (data) => {
-        showMsg('Um jogador entrou na partida!');
+        showMsg('Um jogador entrou na partida!', "info");
         document.getElementById('turnIndicator').innerText = "O jogo começou! É a sua vez.";
         isMyTurn = true;
     });
@@ -81,6 +94,10 @@ function initSocket() {
         isMyTurn = data.nextPlayerId === myUserId;
         document.getElementById('turnIndicator').innerText = isMyTurn ? "Sua vez!" : "Vez do oponente...";
     });
+
+    socket.on("playersOnlineUpdated", (players) => {
+        renderOnlinePlayers(players);
+    })
 
     socket.on('gameOver', async (data) => {
         updateBoardState(data.finalBoard);
@@ -141,11 +158,11 @@ async function createMatch() {
         // Opcional: Se o seu backend não coloca o socket na sala automaticamente via REST,
         // você pode precisar emitir um evento aqui: socket.emit('joinRoom', currentMatchId);
 
-    } catch (e) { showMsg(e.message); }
+    } catch (e) { showMsg(e.message, "error"); }
 }
 
-async function joinMatch() {
-    const mId = document.getElementById('matchIdInput').value;
+async function joinMatch(matchId) {
+    const mId = matchId ? matchId : document.getElementById('matchIdInput').value;
     try {
         await apiFetch('/game/join', 'POST', { matchId: mId });
         currentMatchId = mId;
@@ -156,8 +173,9 @@ async function joinMatch() {
         setupGameUI();
         document.getElementById('turnIndicator').innerText = "Vez do oponente...";
         isMyTurn = false;
-    } catch (e) { showMsg(e.message); }
+    } catch (e) { showMsg(e.message, "error"); }
 }
+
 function logout() {
     localStorage.removeItem('game_token');
     token = null;
@@ -167,16 +185,17 @@ function logout() {
     isMyTurn = false;
 
     if (socket) {
+        socket.emit("disconnect")
         socket.disconnect();
         socket = null;
     }
-
+    location.reload();
     document.getElementById('username').value = '';
     document.getElementById('password').value = '';
     document.getElementById('welcomeMsg').innerText = '';
 
     switchSection('auth-section');
-    showMsg("Você saiu da sua conta com sucesso.");
+    showMsg("Você saiu da sua conta com sucesso.", "success");
 }
 function setupGameUI() {
     document.getElementById('displayMatchId').innerText = currentMatchId;
@@ -198,7 +217,7 @@ function setupGameUI() {
 
 async function playTurn(position) {
     if (!isMyTurn) {
-        showMsg("Não é a sua vez!");
+        showMsg("Não é a sua vez!", "info");
         return;
     }
     // Validação visual rápida
@@ -207,7 +226,7 @@ async function playTurn(position) {
     try {
         await apiFetch('/game/play', 'POST', { matchId: currentMatchId, position: position });
         // Não atualizamos o board localmente ainda; esperamos o socket 'gameStateUpdated'
-    } catch (e) { showMsg(e.message); }
+    } catch (e) { showMsg(e.message, "error"); }
 }
 
 function updateBoardState(boardArray) {
@@ -241,9 +260,9 @@ async function leaveMatch() {
             // socket.emit('leaveRoom', currentMatchId);
         }
 
-        showMsg("Você saiu da partida.");
+        showMsg("Você saiu da partida.", "success");
     } catch (e) {
-        showMsg("Erro ao sair da partida: " + e.message);
+        showMsg("Erro ao sair da partida: " + e.message, "error");
     } finally {
         // Reseta o estado local do jogo independentemente de sucesso ou erro
         currentMatchId = null;
@@ -260,16 +279,16 @@ async function leaveMatch() {
 
 function copyMatchId() {
     if (!currentMatchId) {
-        showMsg("Nenhuma partida ativa!");
+        showMsg("Nenhuma partida ativa!", "info");
         return;
     }
 
     navigator.clipboard.writeText(currentMatchId)
         .then(() => {
-            showMsg("ID da partida copiado!");
+            showMsg("ID da partida copiado!", "success");
         })
         .catch(() => {
-            showMsg("Erro ao copiar o ID.");
+            showMsg("Erro ao copiar o ID.", "success");
         });
 }
 
@@ -284,7 +303,7 @@ async function loadRanking() {
         renderRanking(ranking, me);
     } catch (e) {
         console.error(e);
-        showMsg("Erro ao carregar ranking");
+        showMsg("Erro ao carregar ranking", "error");
     }
 }
 
@@ -356,7 +375,7 @@ async function loadOnlinePlayers() {
         renderOnlinePlayers(players);
     } catch (e) {
         console.error(e);
-        showMsg("Erro ao carregar jogadores online");
+        showMsg("Erro ao carregar jogadores online", "error");
     }
 }
 
@@ -368,7 +387,7 @@ function renderOnlinePlayers(players) {
     `;
 
     players
-        .filter(player => player.id !== myUserId) // 🔥 remove você mesmo
+        .filter(player => player.id !== myUserId)
         .forEach(player => {
             const div = document.createElement('div');
             div.className = 'ranking-item';
@@ -386,7 +405,7 @@ function renderOnlinePlayers(players) {
 
 async function invitePlayer(userGuestId) {
     if (!currentMatchId) {
-        showMsg("Você precisa estar em uma partida para convidar!");
+        showMsg("Você precisa estar em uma partida para convidar!", "info");
         return;
     }
 
@@ -396,9 +415,13 @@ async function invitePlayer(userGuestId) {
             userGuestId
         });
 
-        showMsg("Convite enviado!");
+        if (socket) {
+            socket.emit('invitePlayer', { userGuestId, matchId: currentMatchId});
+        }
+
+        showMsg("Convite enviado!", "success");
     } catch (e) {
-        showMsg(e.message);
+        showMsg(e.message, "error");
     }
 }
 
@@ -407,6 +430,6 @@ async function declineInvite(matchId) {
         await apiFetch('/game/decline-invite', 'POST', { matchId });
         showMsg("Convite recusado!");
     } catch (e) {
-        showMsg(e.message);
+        showMsg(e.message, "error");
     }
 }
