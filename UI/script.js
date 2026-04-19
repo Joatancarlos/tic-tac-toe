@@ -129,6 +129,17 @@ function initSocket() {
             const won = data.winnerId === myUserId;
             document.getElementById('turnIndicator').innerText = won ? "Você Venceu! 🎉" : "Você Perdeu! 😢";
 
+            if (data.abandoned) {
+                document.getElementById('turnIndicator').innerText = won
+                    ? "Adversário abandonou. Você Venceu! 🎉"
+                    : "Você abandonou a partida.";
+                showMsg(!won && "Abandonou pai", "error", false)
+            } else {
+                document.getElementById('turnIndicator').innerText = won
+                    ? "Você Venceu! 🎉"
+                    : "Você Perdeu! 😢";
+            }
+
             // Apenas o cliente do vencedor avisa o banco de dados da vitória
             if (won) {
                 try {

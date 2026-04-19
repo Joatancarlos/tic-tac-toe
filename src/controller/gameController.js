@@ -111,6 +111,50 @@ const gameController = {
         const {matchId} = req.body;
 
         try {
+            const match = await db.match.findUnique({
+                where: { id: matchId },
+                include: { User_Match: true }
+            });
+
+            if (!match) {
+                return res.status(404).json({ message: 'Partida não encontrada.' });
+            }
+
+            if (match.status === GameStatus.ON_GOING) {
+                const opponent = match.User_Match.find(um => um.userId !== userId);
+
+                if (opponent) {
+                    const winnerId = opponent.userId;
+
+                    await db.match.update({
+                        where: { id: matchId },
+                        data: { status: GameStatus.FINISHED, currentPlayerId: null }
+                    });
+
+                    await db.score.updateMany({
+                        where: { userId: winnerId },
+                        data: { victories: { increment: 1 } }
+                    });
+
+                    const board = memoryBoards[matchId] || Array(9).fill(null);
+                    delete memoryBoards[matchId];
+
+                    if (req.io) {
+                        req.io.to(matchId).emit("gameOver", {
+                            winnerId,
+                            isDraw: false,
+                            finalBoard: board,
+                            abandoned: true
+                        });
+                    }
+                }
+            } else if (match.status === GameStatus.WAITING) {
+                await db.match.update({
+                    where: { id: matchId },
+                    data: { status: GameStatus.FINISHED }
+                });
+            }
+
             await db.$transaction([
                 db.user_Match.deleteMany({
                     where: {userId, matchId}
