@@ -39,14 +39,16 @@ app.use(errorHandler);
 
 
 
+const onlineUsers = new Map();
 io.on("connection",   async (socket) => {
     console.log("Client connected:", socket.id);
-
     const token = socket.handshake.auth?.token;
 
+    console.log(onlineUsers)
     try {
         const decoded = jwt.verify(token, process.env.JWT_SECRET);
         socket.userId = decoded.userId;
+        onlineUsers.set(socket.userId, socket.id);
     } catch (err) {
         socket.disconnect();
     }
@@ -61,6 +63,7 @@ io.on("connection",   async (socket) => {
     socket.on("disconnect",  async () => {
         console.log("Client disconnected:", socket.id);
         if (socket.userId) {
+            onlineUsers.delete(socket.userId);
             await setUserOffline(socket.userId);
         }
         await broadcastOnlinePlayers(io)
@@ -71,8 +74,13 @@ io.on("connection",   async (socket) => {
 
     });
 
-    socket.on("invitePlayer", (data) => {
-        console.log("Invite player:", data);
+    socket.on("invitePlayer", async (invite) => {
+        const invitedSocketId = onlineUsers.get(invite.invitedId);
+        console.log("Invite player:", onlineUsers);
+
+        if (invitedSocketId) {
+            io.to(invitedSocketId).emit("gambiarra", invite);
+        }
     })
 });
 server.listen(process.env.PORT || 3000, () => {
