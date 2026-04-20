@@ -12,6 +12,7 @@ import cors from 'cors';
 import {broadcastOnlinePlayers, setUserOffline} from "./service/socketService.js";
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
+import { swaggerUi, swaggerSpec } from "./config/swagger.js";
 
 dotenv.config();
 
@@ -37,6 +38,8 @@ app.use((req, res, next) => {
     req.io = io;
     next();
 });
+
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerSpec));
 
 app.use('/api/players', playersRoutes);
 app.use('/api/auth', authRoutes);
