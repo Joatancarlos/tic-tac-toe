@@ -4,6 +4,7 @@
   "main": "src/app.js",
   "type": "module",
   "scripts": {
+    "prestart": "node generateCert.js",
     "test": "cross-env NODE_ENV=test NODE_OPTIONS=--experimental-vm-modules jest --runInBand --detectOpenHandles --coverage",
     "start": "nodemon src/app.js",
     "db": "npx prisma migrate dev --name project && npx prisma generate",
@@ -26,6 +27,7 @@
     "morgan": "^1.10.1",
     "mysql2": "^3.16.1",
     "nodemon": "^3.1.11",
+    "selfsigned": "^5.5.0",
     "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
