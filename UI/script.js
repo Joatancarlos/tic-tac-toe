@@ -1,5 +1,5 @@
-const API_URL = 'http://localhost:3000/api';
-const SOCKET_URL = 'http://localhost:3000';
+const API_URL = 'https://localhost:3000/api';
+const SOCKET_URL = 'https://localhost:3000';
 
 let token = null;
 let myUserId = null;
@@ -155,8 +155,8 @@ function initSocket() {
             loadRanking();
         }, 1000);
     });
-    socket.on("gambiarra", (invite) => {
-        console.log("Gambiarra: ", );
+    socket.on("playerInvited", (invite) => {
+
         if (invite.invitedId === myUserId) {
             showMsg("Quer dar uma jogadinha?", "success", true, invite)
         }

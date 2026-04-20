@@ -14,7 +14,6 @@ model User {
   tokenVersion Int        @default(0)
   status       UserStatus @default(OFFLINE)
 
-  HttpLog         HttpLog[]
   Score           Score[]
   User_Match      User_Match[]
   invitesReceived MatchInvite[] @relation("InvitedUser")
@@ -72,8 +71,6 @@ model HttpLog {
   userAgent    String?
   error        String?
   createdAt    DateTime @default(now())
-  User         User?    @relation(fields: [userId], references: [id])
-  userId       String?
 
   @@index([method])
   @@index([status])
