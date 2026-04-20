@@ -20,10 +20,6 @@ import { fileURLToPath } from 'url';
 dotenv.config();
 
 const app = express();
-const options = {
-    key: fs.readFileSync("key.pem"),
-    cert: fs.readFileSync("cert.pem")
-}
 let server;
 const isProduction = process.env.NODE_ENV === 'production';
 
@@ -46,8 +42,7 @@ app.use(express.json());
 app.use(httpLogger)
 app.use(cors({
     origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
-    credentials: true }))
+    methods: ["GET", "POST", "PUT", "DELETE"] }))
 app.use((req, res, next) => {
     req.io = io;
     next();
