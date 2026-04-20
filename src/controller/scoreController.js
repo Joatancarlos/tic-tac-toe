@@ -44,11 +44,11 @@ const scoreController = {
     draw: async (req, res, next) => {
         const { player1Id, player2Id } = req.body;
 
-        if (!player1Id || player2Id) return next({
+        if (!player1Id || !player2Id) return next({
             status: 400,
             message: "Parâmetro player1Id e player1Id são necessários"
         })
-
+        const results = [];
         try {
             const playersIds = [player1Id, player2Id];
 
@@ -74,11 +74,11 @@ const scoreController = {
                         }
                     })
                 }
-
-                res.status(200).json(newScore);
+                results.push(newScore);
 
             }
 
+            res.status(200).json(results);
 
         } catch (e) {
             next(e)
