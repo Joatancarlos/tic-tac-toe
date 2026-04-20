@@ -34,15 +34,16 @@ if (isProduction) {
 }
 const io = new Server(server, {
     cors: {
-        origin: "*",
+        origin: [process.env.CLIENT_URL, "https://localhost:3000"],
         methods: ["GET", "POST", "PUT", "DELETE"]
     }
 })
 app.use(express.json());
 app.use(httpLogger)
 app.use(cors({
-    origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"] }))
+    origin: [process.env.CLIENT_URL, "https://localhost:3000"],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true }))
 app.use((req, res, next) => {
     req.io = io;
     next();

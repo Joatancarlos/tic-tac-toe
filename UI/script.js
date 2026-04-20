@@ -1,5 +1,11 @@
-const API_URL = 'https://localhost:3000/api';
-const SOCKET_URL = 'https://localhost:3000';
+const isProduction = window.location.hostname !== 'localhost';
+const API_URL = isProduction
+    ? 'https://idosa.opaleiros.xyz/api'
+    : 'https://localhost:3000/api';
+
+const SOCKET_URL = isProduction
+    ? 'https://idosa.opaleiros.xyz'
+    : 'https://localhost:3000';
 
 let token = null;
 let myUserId = null;
