@@ -1,4 +1,5 @@
 import express from 'express';
+import http from 'http';
 import https from 'https';
 import fs from 'fs';
 import authRoutes from "./routes/authRoutes.js";
@@ -23,7 +24,18 @@ const options = {
     key: fs.readFileSync("key.pem"),
     cert: fs.readFileSync("cert.pem")
 }
-const server = https.createServer(options, app);
+let server;
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (isProduction) {
+    server = http.createServer(app);
+} else {
+    const options = {
+        key: fs.readFileSync("key.pem"),
+        cert: fs.readFileSync("cert.pem")
+    };
+    server = https.createServer(options, app);
+}
 const io = new Server(server, {
     cors: {
         origin: "*",
