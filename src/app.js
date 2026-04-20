@@ -45,7 +45,7 @@ const io = new Server(server, {
 app.use(express.json());
 app.use(httpLogger)
 app.use(cors({
-    origin: process.env.CLIENT_URL,
+    origin: "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true }))
 app.use((req, res, next) => {
