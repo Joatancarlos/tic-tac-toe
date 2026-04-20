@@ -13,6 +13,8 @@ import {broadcastOnlinePlayers, setUserOffline} from "./service/socketService.js
 import jwt from "jsonwebtoken";
 import dotenv from "dotenv";
 import { swaggerUi, swaggerSpec } from "./config/swagger.js";
+import path from 'path';
+import { fileURLToPath } from 'url';
 
 dotenv.config();
 
@@ -50,7 +52,16 @@ app.use('/api/scoreboard', scoreRoutes);
 app.use(errorHandler);
 
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+console.log(path.join(__dirname, '../UI'))
+const uiPath = path.join(__dirname, '../UI');
 
+app.use(express.static(uiPath));
+
+app.get('/', (req, res) => {
+    res.sendFile(path.join(uiPath, 'index.html'));
+});
 
 const onlineUsers = new Map();
 io.on("connection",   async (socket) => {
