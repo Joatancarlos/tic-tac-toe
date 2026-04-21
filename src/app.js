@@ -23,7 +23,7 @@ const app = express();
 let server;
 const isProduction = process.env.NODE_ENV === 'production';
 
-if (isProduction) {
+if (!isProduction) {
     server = http.createServer(app);
 } else {
     const options = {

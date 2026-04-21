@@ -1,5 +1,5 @@
 const isProduction = window.location.hostname !== 'localhost';
-const API_URL = isProduction
+const API_URL = !isProduction
     ? 'https://idosa.opaleiros.xyz/api'
     : 'https://localhost:3000/api';
 
