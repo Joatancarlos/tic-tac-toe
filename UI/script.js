@@ -14,7 +14,6 @@ let socket = null;
 let mySymbol = 'X';
 let isMyTurn = false;
 
-
 async function apiFetch(endpoint, method = 'GET', body = null) {
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;

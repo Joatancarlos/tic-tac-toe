@@ -6,7 +6,6 @@ COPY package*.json ./
 COPY prisma ./prisma/
 RUN npm ci
 RUN npx prisma generate
-
 COPY . .
 RUN chmod +x entrypoint.sh
 
