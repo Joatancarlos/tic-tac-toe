@@ -56,7 +56,6 @@ app.use('/api/auth', authRoutes);
 app.use('/api/game', gameRoutes);
 app.use('/api/scoreboard', scoreRoutes);
 
-
 app.use(errorHandler);
 
 
